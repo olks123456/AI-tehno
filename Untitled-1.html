@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fake Upgrader</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 18px;min-height:100vh;background:#101116;color:#f6f6f8;font:16px system-ui,sans-serif}
+  main{max-width:850px;margin:auto}
+  header,.stat,.upgrade,.clicker{background:#191b23;border:1px solid #30323d;border-radius:14px}
+  header{padding:24px;text-align:center}
+  h1{margin:0;color:#c5ff51;font-size:clamp(2rem,7vw,4rem)}
+  header p,.description{color:#a5a7b3}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+  .stat{padding:16px;text-align:center}
+  .stat small{display:block;color:#a5a7b3}
+  .stat strong{font-size:1.5rem}
+  .clicker{padding:22px;text-align:center}
+  button{border:0;border-radius:10px;padding:13px 17px;background:#c5ff51;color:#15170f;font-weight:800;font-size:1rem;cursor:pointer}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  #click{font-size:1.2rem;padding:17px 26px}
+  h2{margin:28px 0 12px}
+  .upgrades{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .upgrade{padding:17px}
+  .upgrade h3{margin:0 0 6px}
+  .description{min-height:42px;font-size:.9rem}
+  .buyrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .price{font-family:monospace}
+  footer{text-align:center;color:#777b89;font-size:.8rem;margin:20px}
+  @media(max-width:560px){.stats{grid-template-columns:1fr}.upgrades{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Fake Upgrader</h1>
+    <p>Kliki, teeni mängumünte ja osta uuendusi!</p>
+  </header>
+
+  <section class="stats">
+    <div class="stat"><small>Sinu saldo</small><strong id="money">0</strong></div>
+    <div class="stat"><small>Münte kliki kohta</small><strong id="power">1</strong></div>
+    <div class="stat"><small>Münte sekundis</small><strong id="income">0</strong></div>
+  </section>
+
+  <section class="clicker">
+    <p>Vajuta nuppu, et münte teenida.</p>
+    <button id="click">KLIKI +1 🪙</button>
+  </section>
+
+  <h2>Uuendused</h2>
+  <section class="upgrades" id="upgrades"></section>
+  <footer>Progress salvestub automaatselt sinu brauseris. Mündid on mänguraha.</footer>
+</main>
+<script>
+const items=[
+  {id:"mouse",icon:"🖱️",name:"Parem hiir",desc:"+1 münt kliki kohta",base:15,type:"click",amount:1},
+  {id:"intern",icon:"🧑‍💻",name:"Praktikant",desc:"+1 münt sekundis",base:30,type:"auto",amount:1},
+  {id:"energy",icon:"⚡",name:"Energiajoogid",desc:"+5 münti kliki kohta",base:100,type:"click",amount:5},
+  {id:"bot",icon:"🤖",name:"Klikibot",desc:"+8 münti sekundis",base:220,type:"auto",amount:8},
+  {id:"studio",icon:"🎥",name:"Keldristuudio",desc:"+30 münti sekundis",base:900,type:"auto",amount:30},
+  {id:"rocket",icon:"🚀",name:"Mündirakett",desc:"+100 münti kliki kohta",base:4000,type:"click",amount:100}
+];
+let game;
+try{game=JSON.parse(localStorage.getItem("fake-upgrader"))||{};}catch{game={};}
+game={money:game.money||0,power:game.power||1,income:game.income||0,owned:game.owned||{}};
+
+const cost=item=>Math.floor(item.base*Math.pow(1.6,game.owned[item.id]||0));
+function save(){localStorage.setItem("fake-upgrader",JSON.stringify(game));}
+function render(){
+  document.querySelector("#money").textContent=Math.floor(game.money).toLocaleString("et-EE");
+  document.querySelector("#power").textContent=game.power.toLocaleString("et-EE");
+  document.querySelector("#income").textContent=game.income.toLocaleString("et-EE");
+  document.querySelector("#click").textContent=`KLIKI +${game.power} 🪙`;
+  document.querySelector("#upgrades").innerHTML=items.map(item=>{
+    const price=cost(item);
+    return `<article class="upgrade">
+      <h3>${item.icon} ${item.name}</h3>
+      <div class="description">${item.desc} · Ostetud: ${game.owned[item.id]||0}</div>
+      <div class="buyrow"><span class="price">🪙 ${price.toLocaleString("et-EE")}</span>
+      <button data-id="${item.id}" ${game.money<price?"disabled":""}>Osta</button></div>
+    </article>`;
+  }).join("");
+}
+document.querySelector("#click").addEventListener("click",()=>{
+  game.money+=game.power; save(); render();
+});
+document.querySelector("#upgrades").addEventListener("click",event=>{
+  const item=items.find(x=>x.id===event.target.dataset.id);
+  if(!item)return;
+  const price=cost(item);
+  if(game.money<price)return;
+  game.money-=price;
+  game.owned[item.id]=(game.owned[item.id]||0)+1;
+  if(item.type==="click")game.power+=item.amount;
+  else game.income+=item.amount;
+  save(); render();
+});
+setInterval(()=>{game.money+=game.income;save();render();},1000);
+render();
+</script>
+</body>
+</html>
